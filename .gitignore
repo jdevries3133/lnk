@@ -1,0 +1,3 @@
+/target
+.env
+tailwind.generated.css

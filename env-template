@@ -1,0 +1,5 @@
+POSTGRES_USER=you
+POSTGRES_PASSWORD=somepassword
+POSTGRES_DB=lnk_db
+
+DATABASE_URL=postgres://you:somepassword@localhost:5432/lnk_db
