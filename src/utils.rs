@@ -1,6 +1,6 @@
 use axum::{
+    http::{header, HeaderMap},
     response::IntoResponse,
-    http::{header, HeaderMap}
 };
 
 /// Take wrap some string response content with a text/html content-type header

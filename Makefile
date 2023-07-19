@@ -8,8 +8,8 @@ build:
 
 dev:
 	npx concurrently --names 'tailwind,cargo' \
-		'npx tailwindcss -i ./tailwind.css -s src/tailwind.generated.css' \
-		'cargo watch'
+		'npx tailwindcss -i ./tailwind.css -o src/tailwind.generated.css' \
+		"cargo watch -x 'run'"
 
 
 

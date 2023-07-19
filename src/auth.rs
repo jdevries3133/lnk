@@ -1,11 +1,10 @@
+use super::{
+    db_ops::get_user,
+    pw::{check, HashedPw},
+    session::Session,
+};
 use anyhow::{bail, Result};
-use sqlx::pool::PoolConnection;
-use sqlx::postgres::Postgres;
-use sqlx::query_as;
-
-use super::db_ops::get_user;
-use super::pw::{check, HashedPw};
-use super::session::Session;
+use sqlx::{pool::PoolConnection, postgres::Postgres, query_as};
 
 /// `identifier` can be a users username _or_ email
 pub async fn authenticate(

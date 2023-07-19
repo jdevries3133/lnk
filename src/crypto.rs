@@ -12,7 +12,8 @@ fn get_session_secret() -> Vec<u8> {
 
 pub fn get_digest(val: &[u8]) -> Vec<u8> {
     let secret = get_session_secret();
-    let mut mac = HmacSha256::new_from_slice(&secret).expect("can init with secret key");
+    let mut mac =
+        HmacSha256::new_from_slice(&secret).expect("can init with secret key");
     mac.update(val);
 
     mac.finalize().into_bytes().to_vec()
@@ -20,7 +21,8 @@ pub fn get_digest(val: &[u8]) -> Vec<u8> {
 
 pub fn is_valid(val: &[u8], digest: &[u8]) -> bool {
     let secret = get_session_secret();
-    let mut mac = HmacSha256::new_from_slice(&secret).expect("can init with secret key");
+    let mut mac =
+        HmacSha256::new_from_slice(&secret).expect("can init with secret key");
     mac.update(val);
 
     mac.verify_slice(digest).is_ok()

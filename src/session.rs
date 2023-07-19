@@ -1,8 +1,6 @@
+use super::{crypto, models::User};
 use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
-
-use super::models::User;
-use super::crypto;
 
 /// HMAC-secured session string, signed by $SECRET_KEY
 ///
@@ -13,7 +11,9 @@ pub struct Session {
     pub user: User,
 }
 
-pub fn serialize_session(session: &Session) -> Result<String, serde_json::Error> {
+pub fn serialize_session(
+    session: &Session,
+) -> Result<String, serde_json::Error> {
     let json_bytes = serde_json::to_string(&session)?;
     let b64 = general_purpose::STANDARD_NO_PAD.encode(json_bytes);
     let raw_digest = crypto::get_digest(&b64.clone().into_bytes());
@@ -31,20 +31,22 @@ pub fn deserialize_session(cookie: &str) -> Result<Session, &'static str> {
         Err("Invalid session")
     } else {
         let b64_json: Vec<u8> = parts[0].into();
-        let digest: Vec<u8> = match general_purpose::STANDARD_NO_PAD.decode(parts[1]) {
-            Ok(v) => v,
-            Err(_) => {
-                return Err("Cannot base64 decode the digest");
-            }
-        };
-
-        if crypto::is_valid(&b64_json, &digest) {
-            let json_string = match general_purpose::STANDARD_NO_PAD.decode(b64_json) {
+        let digest: Vec<u8> =
+            match general_purpose::STANDARD_NO_PAD.decode(parts[1]) {
                 Ok(v) => v,
                 Err(_) => {
-                    return Err("Cannot base64 decode sesion string");
+                    return Err("Cannot base64 decode the digest");
                 }
             };
+
+        if crypto::is_valid(&b64_json, &digest) {
+            let json_string =
+                match general_purpose::STANDARD_NO_PAD.decode(b64_json) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        return Err("Cannot base64 decode sesion string");
+                    }
+                };
 
             match serde_json::from_slice(&json_string) {
                 Ok(v) => Ok(v),
@@ -87,7 +89,8 @@ mod tests {
     fn test_deserialize_session() {
         env::set_var("SESSION_SECRET", "foo");
 
-        let result = deserialize_session(&String::from(SERIALIZED_SESSION)).expect("result");
+        let result = deserialize_session(&String::from(SERIALIZED_SESSION))
+            .expect("result");
         // little snapshot test
         assert_eq!(result.user.id, get_session().user.id);
     }
