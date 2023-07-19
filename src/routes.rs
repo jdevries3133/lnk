@@ -11,30 +11,14 @@ use axum::{
 };
 use regex::Regex;
 use serde::Deserialize;
-use sqlx::{pool::PoolConnection, query, query_as, Postgres, Transaction};
+use sqlx::{pool::PoolConnection, query, query_as, Postgres};
 
 /// Generic container for insert queries RETURNING id
 struct SqlId {
     id: i32
 }
-
-#[derive(Debug)]
-struct Name {
-    id: i32,
-    name: String,
-}
-
-pub async fn root(
-    State(state): State<AppState>,
-) -> Result<Response, ServerError> {
-    let mut dbc = get_db(state).await;
-    query!(r#"INSERT INTO test (name) VALUES ('tim')"#)
-        .execute(dbc.as_mut())
-        .await?;
-    let _names = query_as!(Name, "SELECT id, name FROM test")
-        .fetch_all(dbc.as_mut())
-        .await?;
-    Ok(html_response(create_page(
+pub async fn root() -> impl IntoResponse {
+html_response(create_page(
         "Home",
         r#"
         <div class='flex flex-col'>
@@ -49,7 +33,6 @@ pub async fn root(
         </div>
         "#,
     ))
-    .into_response())
 }
 
 pub async fn login() -> &'static str {
@@ -132,10 +115,8 @@ pub async fn handle_register(
 }
 
 pub async fn get_profile(
-    State(state): State<AppState>,
     headers: HeaderMap
 ) -> Result<Response, ServerError> {
-    let mut dbc = get_db(state).await;
     let user = get_user(headers).await;
     println!("{:?}", user); // wohoo, we have a user
     Ok(r#"
