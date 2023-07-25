@@ -3,12 +3,12 @@ ENV=source .env &&
 DB_CONTAINER_NAME := "lnk_db"
 
 build:
-	npx tailwindcss -i ./tailwind.css -o src/tailwind.generated.css
+	npm run build
 	cargo build
 
 dev:
 	npx concurrently --names 'tailwind,cargo' \
-		'npx tailwindcss -i ./tailwind.css -o src/tailwind.generated.css' \
+		'npm run dev' \
 		"cargo watch -x 'run'"
 
 

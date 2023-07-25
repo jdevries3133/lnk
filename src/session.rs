@@ -65,7 +65,7 @@ mod tests {
 
     fn get_session() -> Session {
         Session {
-            user: models::User {
+            user: User {
                 id: 1,
                 username: "Jack".to_string(),
                 email: "jack@jack.com".to_string(),

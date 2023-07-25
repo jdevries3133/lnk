@@ -1,4 +1,4 @@
-use super::{models::User};
+use super::models::User;
 use anyhow::Result;
 use sqlx::{pool::PoolConnection, postgres::Postgres, query_as};
 

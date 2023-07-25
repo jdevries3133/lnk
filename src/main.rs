@@ -1,17 +1,21 @@
-use axum::routing::{get, post, Router};
+use axum::{
+    middleware::from_fn,
+    routing::{get, post, Router},
+};
 use dotenvy::dotenv;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::{env, net::SocketAddr};
 
 mod auth;
+mod components;
 mod crypto;
 mod db_ops;
 mod errors;
+mod middleware;
 mod models;
 mod pw;
 mod routes;
 mod session;
-mod templates;
 mod utils;
 
 #[derive(Clone)]
@@ -29,9 +33,12 @@ async fn main() {
         .route("/", get(routes::root))
         .route("/login", get(routes::login))
         .route("/login", post(routes::handle_login))
+        .route("/logout", post(routes::handle_logout))
         .route("/register", get(routes::register_form))
         .route("/register", post(routes::handle_register))
         .route("/profile", get(routes::get_profile))
+        .route("/auth-widget", get(routes::auth_widget_handler))
+        .layer(from_fn(middleware::html_headers))
         .with_state(state);
 
     // run our app with hyper

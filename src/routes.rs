@@ -1,8 +1,15 @@
 use super::{
-    auth::authenticate, errors::ServerError, session::{serialize_session, deserialize_session},
-    templates::create_page, utils::html_response, AppState,
+    auth::authenticate,
+    components::{
+        auth_widget, create_page, form_field, hx_form, unauthenticated_actions,
+        AuthWidgetProps, CreatePageProps, FormFieldProps, HxFormProps,
+    },
+    errors::ServerError,
+    models::{SqlId, User},
     pw,
-    models::User
+    session::{deserialize_session, serialize_session},
+    utils::html_response,
+    AppState,
 };
 use axum::{
     extract::{Form, State},
@@ -13,36 +20,40 @@ use regex::Regex;
 use serde::Deserialize;
 use sqlx::{pool::PoolConnection, query, query_as, Postgres};
 
-/// Generic container for insert queries RETURNING id
-struct SqlId {
-    id: i32
-}
-pub async fn root() -> impl IntoResponse {
-html_response(create_page(
+pub async fn root(headers: HeaderMap) -> impl IntoResponse {
+    let user = get_user(headers).await;
+    html_response(create_page(CreatePageProps::new(
         "Home",
-        r#"
-        <div class='flex flex-col'>
-            <button
-                hx-get="/login" hx-swap="outerHTML"
-                class='bg-blue-100 rounded p-2 m-2 w-24'
-            >Login</button>
-            <button
-                hx-get="/register" hx-swap="outerHTML"
-                class='bg-green-100 rounded p-2 m-2 w-24'
-            >Register</button>
-        </div>
-        "#,
-    ))
+        &auth_widget(AuthWidgetProps { user }),
+    )))
 }
 
-pub async fn login() -> &'static str {
-    r#"
-        <form hx-post="/login">
-            <label>Username: <input type="text" name="username" /></label>
-            <label>Password: <input type="password" name="password" /></label>
-            <button>Submit</button>
-        </form>
-   "#
+pub async fn auth_widget_handler(headers: HeaderMap) {
+    let user = get_user(headers).await;
+    auth_widget(AuthWidgetProps { user });
+}
+
+pub async fn login() -> impl IntoResponse {
+    format!(
+        r#"<div class="w-48">{}</div>"#,
+        hx_form(HxFormProps {
+            children: [
+                form_field(FormFieldProps {
+                    input_type: "text".into(),
+                    name: "username".into(),
+                    label_text: "Username".into(),
+                }),
+                form_field(FormFieldProps {
+                    input_type: "password".into(),
+                    name: "password".into(),
+                    label_text: "Password".into(),
+                }),
+            ]
+            .join(""),
+            hx_post: "/login",
+            hx_target: "#auth-widget"
+        })
+    )
 }
 
 #[derive(Deserialize)]
@@ -66,7 +77,7 @@ pub async fn handle_login(
                 serialize_session(&session)?
             ))?,
         );
-        Ok((headers, "nice").into_response())
+        Ok((headers, auth_widget(AuthWidgetProps { user: Some(session.user) })).into_response())
     } else {
         println!("Failed login attempt (username = {})", data.username);
         Ok((StatusCode::BAD_REQUEST, "hi").into_response())
@@ -81,7 +92,8 @@ pub async fn register_form() -> Response {
             <label>Password: <input type="password" name="password" /></label>
             <button>Submit</button>
         </form>
-    "#.into_response()
+    "#
+    .into_response()
 }
 
 #[derive(Deserialize)]
@@ -102,26 +114,38 @@ pub async fn handle_register(
         "INSERT INTO users (username, email) VALUES ($1, $2) RETURNING id",
         data.username,
         data.email
-    ).fetch_one(&mut txn).await?;
+    )
+    .fetch_one(&mut txn)
+    .await?;
     query!(
         "INSERT INTO password (user_id, salt, digest) VALUES ($1, $2, $3)",
         user.id,
         hashed_pw.salt,
         hashed_pw.digest
-    ).execute(&mut txn).await?;
+    )
+    .execute(&mut txn)
+    .await?;
     txn.commit().await?;
 
     Ok("you registered".into_response())
 }
 
-pub async fn get_profile(
-    headers: HeaderMap
-) -> Result<Response, ServerError> {
+pub async fn handle_logout() -> Result<impl IntoResponse, ServerError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("Set-Cookie", HeaderValue::from_str("null")?);
+    Ok((
+        headers,
+        format!("<p>You have logged out!</p>{}", unauthenticated_actions()),
+    ))
+}
+
+pub async fn get_profile(headers: HeaderMap) -> Result<Response, ServerError> {
     let user = get_user(headers).await;
-    println!("{:?}", user); // wohoo, we have a user
+    println!("{:?}", user);
     Ok(r#"
        yo you are
-       "#.into_response())
+       "#
+    .into_response())
 }
 
 async fn get_user(headers: HeaderMap) -> Option<User> {
